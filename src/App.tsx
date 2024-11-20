@@ -1,9 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 function App() {
   const [message, setMessage] = useState('');
   const [response, setResponse] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [testMessage, setTestMessage] = useState('');
+
+  // Test the connection on load
+  useEffect(() => {
+    fetch('https://michael-levitt-ai-backend-a5ed710976c3.herokuapp.com/test')
+      .then(res => res.json())
+      .then(data => setTestMessage(data.message))
+      .catch(err => console.error('Test failed:', err));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -11,30 +20,17 @@ function App() {
 
     setIsLoading(true);
     try {
+      // First try a simple POST without any body
       const res = await fetch('https://michael-levitt-ai-backend-a5ed710976c3.herokuapp.com/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Origin': 'https://mikeagent.netlify.app'
-        },
-        body: JSON.stringify({ message }),
-        mode: 'cors'
+        }
       });
 
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(errorText || `HTTP error! status: ${res.status}`);
-      }
-
       const data = await res.json();
-      if (data.error) throw new Error(data.error);
-
       setResponse(data.text);
       
-      if (data.audio) {
-        const audio = new Audio(`data:audio/mpeg;base64,${data.audio}`);
-        await audio.play();
-      }
     } catch (error) {
       console.error('Error:', error);
       setResponse('Sorry, there was an error processing your request.');
@@ -50,6 +46,12 @@ function App() {
         <div className="text-2xl font-bold text-center mb-6">
           Chat with Michael Levitt AI
         </div>
+        
+        {testMessage && (
+          <div className="mb-4 p-2 bg-green-100 text-green-700 rounded">
+            {testMessage}
+          </div>
+        )}
         
         <div className="space-y-4">
           <div className="min-h-[200px] p-4 bg-gray-50 rounded-lg border">
