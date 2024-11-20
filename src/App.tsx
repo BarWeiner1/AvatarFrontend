@@ -15,9 +15,14 @@ function App() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         body: JSON.stringify({ message }),
       });
+
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
 
       const data = await res.json();
       if (data.error) throw new Error(data.error);
@@ -36,7 +41,7 @@ function App() {
       setIsLoading(false);
       setMessage('');
     }
-  };
+};
 
   return (
     <div className="min-h-screen bg-gray-100 p-4 flex items-center justify-center">
