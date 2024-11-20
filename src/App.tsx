@@ -15,14 +15,15 @@ function App() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
+          'Origin': 'https://mikeagent.netlify.app'
         },
         body: JSON.stringify({ message }),
-        mode: 'cors',
+        mode: 'cors'
       });
 
       if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
+        const errorText = await res.text();
+        throw new Error(errorText || `HTTP error! status: ${res.status}`);
       }
 
       const data = await res.json();
