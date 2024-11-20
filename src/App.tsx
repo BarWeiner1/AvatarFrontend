@@ -18,6 +18,7 @@ function App() {
           'Accept': 'application/json',
         },
         body: JSON.stringify({ message }),
+        mode: 'cors',
       });
 
       if (!res.ok) {
@@ -29,10 +30,9 @@ function App() {
 
       setResponse(data.text);
       
-      // Play audio if available
       if (data.audio) {
         const audio = new Audio(`data:audio/mpeg;base64,${data.audio}`);
-        audio.play();
+        await audio.play();
       }
     } catch (error) {
       console.error('Error:', error);
@@ -41,7 +41,7 @@ function App() {
       setIsLoading(false);
       setMessage('');
     }
-};
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 p-4 flex items-center justify-center">
