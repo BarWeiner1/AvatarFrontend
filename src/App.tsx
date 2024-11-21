@@ -1,19 +1,31 @@
-// src/App.tsx
-import { useState} from 'react';
+import { useState } from 'react';
+
+interface Message {
+  text: string;
+  isUser: boolean;
+  timestamp: string;
+}
 
 function App() {
   const [message, setMessage] = useState('');
   const [response, setResponse] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [messageHistory, setMessageHistory] = useState<Message[]>([]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim() || isLoading) return;
 
     setIsLoading(true);
+    const userMessage = {
+      text: message,
+      isUser: true,
+      timestamp: new Date().toLocaleTimeString()
+    };
+    setMessageHistory(prev => [...prev, userMessage]);
+
     try {
       const res = await fetch('https://michael-levitt-ai-backend-a5ed710976c3.herokuapp.com/api/chat', {
-      //const res = await fetch('http://127.0.0.1:5000/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -26,6 +38,13 @@ function App() {
 
       setResponse(data.text);
       
+      const aiMessage = {
+        text: data.text,
+        isUser: false,
+        timestamp: new Date().toLocaleTimeString()
+      };
+      setMessageHistory(prev => [...prev, aiMessage]);
+      
       // Play audio if available
       if (data.audio) {
         console.log('Received audio Base64:', data.audio);
@@ -37,6 +56,12 @@ function App() {
     } catch (error) {
       console.error('Error:', error);
       setResponse('Sorry, there was an error processing your request.');
+      const errorMessage = {
+        text: 'Sorry, there was an error processing your request.',
+        isUser: false,
+        timestamp: new Date().toLocaleTimeString()
+      };
+      setMessageHistory(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
       setMessage('');
@@ -82,6 +107,33 @@ function App() {
               )}
             </button>
           </form>
+
+          {/* Message History */}
+          {messageHistory.length > 0 && (
+            <div className="mt-8">
+              <div className="text-lg font-semibold mb-2">Message History</div>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {messageHistory.map((msg, index) => (
+                  <div
+                    key={index}
+                    className={`p-2 rounded ${
+                      msg.isUser ? 'bg-blue-100' : 'bg-gray-100'
+                    }`}
+                  >
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="font-medium">
+                        {msg.isUser ? 'You' : 'AI'}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {msg.timestamp}
+                      </span>
+                    </div>
+                    <div className="text-sm">{msg.text}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
