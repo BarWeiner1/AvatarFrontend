@@ -1,5 +1,5 @@
 // src/App.tsx
-import { useState, useRef } from 'react';
+import { useState} from 'react';
 
 function App() {
   const [message, setMessage] = useState('');
