@@ -13,6 +13,7 @@ function App() {
     setIsLoading(true);
     try {
       const res = await fetch('https://michael-levitt-ai-backend-a5ed710976c3.herokuapp.com/api/chat', {
+      //const res = await fetch('http://127.0.0.1:5000/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -27,7 +28,10 @@ function App() {
       
       // Play audio if available
       if (data.audio) {
-        const audio = new Audio(`data:audio/mpeg;base64,${data.audio}`);
+        console.log('Received audio Base64:', data.audio);
+        const audioBlob = new Blob([Uint8Array.from(atob(data.audio), c => c.charCodeAt(0))], { type: 'audio/mpeg' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
         audio.play();
       }
     } catch (error) {
