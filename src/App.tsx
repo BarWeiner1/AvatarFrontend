@@ -12,6 +12,9 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [messageHistory, setMessageHistory] = useState<Message[]>([]);
 
+  // Assuming the image is saved in your public folder as michael-levitt.jpg
+  const profilePhotoPath = "/michael-levitt.jpg";
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim() || isLoading) return;
@@ -45,7 +48,6 @@ function App() {
       };
       setMessageHistory(prev => [...prev, aiMessage]);
       
-      // Play audio if available
       if (data.audio) {
         console.log('Received audio Base64:', data.audio);
         const audioBlob = new Blob([Uint8Array.from(atob(data.audio), c => c.charCodeAt(0))], { type: 'audio/mpeg' });
@@ -71,8 +73,17 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-100 p-4 flex items-center justify-center">
       <div className="w-full max-w-2xl bg-white rounded-lg shadow-lg p-6">
-        <div className="text-2xl font-bold text-center mb-6">
-          Chat with Michael Levitt AI
+        <div className="flex flex-col items-center mb-6">
+          <div className="w-32 h-32 mb-4 overflow-hidden rounded-lg shadow-md">
+            <img
+              src={profilePhotoPath}
+              alt="Profile"
+              className="w-full h-full object-cover"
+            />
+          </div>
+          <div className="text-2xl font-bold text-center">
+            Chat with Michael Levitt AI
+          </div>
         </div>
         
         <div className="space-y-4">
@@ -108,7 +119,6 @@ function App() {
             </button>
           </form>
 
-          {/* Message History */}
           {messageHistory.length > 0 && (
             <div className="mt-8">
               <div className="text-lg font-semibold mb-2">Message History</div>
