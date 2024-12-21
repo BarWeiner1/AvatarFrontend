@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { auth, db } from './firebase';
-import { collection, addDoc, query, orderBy, getDocs, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { SignIn } from './components/SignIn';
 
@@ -22,36 +22,13 @@ interface Conversation {
 
 function App() {
   const [message, setMessage] = useState('');
-  const [response, setResponse] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [messageHistory, setMessageHistory] = useState<Message[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
 
-  // New: Authentication listener
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      if (user) {
-        loadConversations(user.uid);
-      } else {
-        setMessageHistory([]);
-        setConversations([]);
-        setCurrentConversationId(null);
-      }
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (user && currentConversationId) {
-      loadMessages(currentConversationId);
-    }
-  }, [currentConversationId, user]);
-
-  const loadConversations = async (userId: string) => {
+  const loadConversations = useCallback(async (userId: string) => {
     const q = query(
       collection(db, 'conversations'),
       where('userId', '==', userId),
@@ -72,7 +49,29 @@ function App() {
     });
 
     return unsubscribe;
-  };
+  }, [currentConversationId]);
+
+  // New: Authentication listener
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+      if (user) {
+        loadConversations(user.uid);
+      } else {
+        setMessageHistory([]);
+        setConversations([]);
+        setCurrentConversationId(null);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [loadConversations]);
+
+  useEffect(() => {
+    if (user && currentConversationId) {
+      loadMessages(currentConversationId);
+    }
+  }, [currentConversationId, user]);
 
   const createNewConversation = async () => {
     if (!user) return;
