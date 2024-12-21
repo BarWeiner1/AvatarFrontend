@@ -125,9 +125,8 @@ function App() {
       // Save user message to Firestore
       await addDoc(collection(db, 'messages'), userMessage);
       
-      // Get conversation context from last 5 messages
-      const context = messageHistory
-        .slice(-5)
+      // Get full conversation context
+      const conversationContext = messageHistory
         .map(msg => `${msg.isUser ? 'User' : 'Assistant'}: ${msg.text}`)
         .join('\n');
 
@@ -138,7 +137,7 @@ function App() {
         },
         body: JSON.stringify({ 
           message,
-          context
+          context: conversationContext // Send full conversation context
         }),
       });
 
@@ -165,14 +164,24 @@ function App() {
         timestamp: new Date().toISOString()
       });
       
+      // Always play audio response
       if (data.audio) {
-        const audioBlob = new Blob(
-          [Uint8Array.from(atob(data.audio), c => c.charCodeAt(0))], 
-          { type: 'audio/mpeg' }
-        );
-        const audioUrl = URL.createObjectURL(audioBlob);
-        const audio = new Audio(audioUrl);
-        await audio.play();
+        try {
+          const audioBlob = new Blob(
+            [Uint8Array.from(atob(data.audio), c => c.charCodeAt(0))], 
+            { type: 'audio/mpeg' }
+          );
+          const audioUrl = URL.createObjectURL(audioBlob);
+          const audio = new Audio(audioUrl);
+          await audio.play();
+          
+          // Clean up the URL after playing
+          audio.onended = () => {
+            URL.revokeObjectURL(audioUrl);
+          };
+        } catch (audioError) {
+          console.error('Error playing audio:', audioError);
+        }
       }
     } catch (error) {
       console.error('Error:', error);
