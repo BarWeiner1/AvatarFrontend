@@ -71,7 +71,9 @@ function App() {
         const snapshot = await getDocs(q);
         if (snapshot.empty) {
           const newConversation = await createNewConversation();
-          setCurrentConversationId(newConversation.id);
+          if (newConversation) {
+            setCurrentConversationId(newConversation.id);
+          }
         } else {
           // Set the most recent conversation as current
           setCurrentConversationId(snapshot.docs[0].id);
@@ -93,7 +95,7 @@ function App() {
   }, [currentConversationId, user]);
 
   const createNewConversation = async () => {
-    if (!user) return;
+    if (!user) return null;
     
     const newConversation: Omit<Conversation, 'id'> = {
       title: 'New Conversation',
@@ -102,8 +104,13 @@ function App() {
       lastMessage: ''
     };
 
-    const docRef = await addDoc(collection(db, 'conversations'), newConversation);
-    return { id: docRef.id, ...newConversation };
+    try {
+      const docRef = await addDoc(collection(db, 'conversations'), newConversation);
+      return { id: docRef.id, ...newConversation };
+    } catch (error) {
+      console.error('Error creating new conversation:', error);
+      return null;
+    }
   };
 
   // Update loadMessages to filter by conversationId
