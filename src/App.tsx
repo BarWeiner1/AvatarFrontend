@@ -303,6 +303,8 @@ function App() {
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Type your message..."
               disabled={isLoading || !currentConversationId}
+              id="message-input"
+              name="message"
               className="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <button
