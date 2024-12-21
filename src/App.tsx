@@ -4,6 +4,15 @@ import { collection, addDoc, query, orderBy, where, onSnapshot, doc, updateDoc, 
 import { onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { SignIn } from './components/SignIn';
 
+// Add type declaration for window.currentAudio
+declare global {
+  interface Window {
+    currentAudio: HTMLAudioElement | null;
+  }
+}
+
+window.currentAudio = null;
+
 interface Message {
   text: string;
   isUser: boolean;
@@ -175,11 +184,22 @@ function App() {
           );
           const audioUrl = URL.createObjectURL(audioBlob);
           const audio = new Audio(audioUrl);
-          await audio.play();
+
+          // Make sure previous audio is stopped before playing new one
+          if (window.currentAudio) {
+            window.currentAudio.pause();
+            URL.revokeObjectURL(window.currentAudio.src);
+          }
+          window.currentAudio = audio;
+
+          await audio.play().catch(error => {
+            console.error('Error playing audio:', error);
+          });
           
           // Clean up the URL after playing
           audio.onended = () => {
             URL.revokeObjectURL(audioUrl);
+            window.currentAudio = null;
           };
         } catch (audioError) {
           console.error('Error playing audio:', audioError);
