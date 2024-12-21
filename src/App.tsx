@@ -60,9 +60,16 @@ function App() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
       if (user) {
+        // First load conversations
         await loadConversations(user.uid);
-        // Always create a new conversation on login
-        await createNewConversation();
+        // Then create a new conversation and set it as current
+        const newConversationRef = await addDoc(collection(db, 'conversations'), {
+          title: 'New Conversation',
+          userId: user.uid,
+          timestamp: new Date().toISOString(),
+          lastMessage: ''
+        });
+        setCurrentConversationId(newConversationRef.id);
       } else {
         setMessageHistory([]);
         setConversations([]);
@@ -76,10 +83,13 @@ function App() {
   // Focus input field when conversation is created
   useEffect(() => {
     if (currentConversationId) {
-      const inputField = document.getElementById('message-input') as HTMLInputElement;
-      if (inputField) {
-        inputField.focus();
-      }
+      setTimeout(() => {
+        const inputField = document.getElementById('message-input') as HTMLInputElement;
+        if (inputField) {
+          inputField.focus();
+          inputField.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
     }
   }, [currentConversationId]);
 
