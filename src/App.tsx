@@ -61,10 +61,8 @@ function App() {
       setUser(user);
       if (user) {
         await loadConversations(user.uid);
-        // Create a new conversation immediately after login if there isn't one selected
-        if (!currentConversationId) {
-          await createNewConversation();
-        }
+        // Always create a new conversation on login
+        await createNewConversation();
       } else {
         setMessageHistory([]);
         setConversations([]);
@@ -73,7 +71,17 @@ function App() {
     });
 
     return () => unsubscribe();
-  }, [loadConversations, currentConversationId]);
+  }, [loadConversations]);
+
+  // Focus input field when conversation is created
+  useEffect(() => {
+    if (currentConversationId) {
+      const inputField = document.getElementById('message-input') as HTMLInputElement;
+      if (inputField) {
+        inputField.focus();
+      }
+    }
+  }, [currentConversationId]);
 
   useEffect(() => {
     if (user && currentConversationId) {
