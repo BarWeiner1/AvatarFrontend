@@ -132,10 +132,15 @@ function App() {
       // Save user message to Firestore
       await addDoc(collection(db, 'messages'), userMessage);
       
-      // Get full conversation context
+      // Get full conversation context with better structure
       const conversationContext = messageHistory
-        .map(msg => `${msg.isUser ? 'User' : 'Assistant'}: ${msg.text}`)
-        .join('\n');
+        .map(msg => ({
+          role: msg.isUser ? 'user' : 'assistant',
+          content: msg.text,
+          timestamp: msg.timestamp
+        }))
+        .map(msg => JSON.stringify(msg))
+        .join('\n---\n');
 
       const res = await fetch('https://michael-levitt-ai-backend-a5ed710976c3.herokuapp.com/api/chat', {
         method: 'POST',
@@ -148,7 +153,8 @@ function App() {
         credentials: 'omit',
         body: JSON.stringify({ 
           message,
-          context: conversationContext // Send full conversation context
+          context: conversationContext,
+          messageHistory: messageHistory.slice(-5) // Send last 5 messages for immediate context
         }),
       });
 
