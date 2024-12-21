@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { auth, db } from './firebase';
-import { collection, addDoc, query, orderBy, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, where, onSnapshot, doc, updateDoc, deleteDoc, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { SignIn } from './components/SignIn';
 
@@ -133,8 +133,10 @@ function App() {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          'Origin': 'https://mikeagent.netlify.app'
         },
         mode: 'cors',
+        credentials: 'omit',
         body: JSON.stringify({ 
           message,
           context: conversationContext // Send full conversation context
@@ -200,6 +202,34 @@ function App() {
     }
   };
 
+  // Add delete conversation function
+  const deleteConversation = async (conversationId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering the conversation selection
+    if (!user) return;
+
+    try {
+      // Delete the conversation document
+      await deleteDoc(doc(db, 'conversations', conversationId));
+
+      // Delete all messages in the conversation
+      const messagesQuery = query(
+        collection(db, 'messages'),
+        where('conversationId', '==', conversationId)
+      );
+      const messagesSnapshot = await getDocs(messagesQuery);
+      const deletePromises = messagesSnapshot.docs.map(doc => deleteDoc(doc.ref));
+      await Promise.all(deletePromises);
+
+      // If the deleted conversation was selected, clear the current conversation
+      if (currentConversationId === conversationId) {
+        setCurrentConversationId(null);
+        setMessageHistory([]);
+      }
+    } catch (error) {
+      console.error('Error deleting conversation:', error);
+    }
+  };
+
   // New: Show sign in page if no user
   if (!user) {
     return <SignIn />;
@@ -233,16 +263,28 @@ function App() {
         
         <div className="flex-1 overflow-y-auto">
           {conversations.map((conv) => (
-            <button
+            <div
               key={conv.id}
-              onClick={() => setCurrentConversationId(conv.id)}
-              className={`w-full p-3 text-left hover:bg-gray-100 flex flex-col gap-1 ${
+              className={`group relative hover:bg-gray-100 ${
                 currentConversationId === conv.id ? 'bg-gray-100' : ''
               }`}
             >
-              <div className="font-medium truncate">{conv.title}</div>
-              <div className="text-xs text-gray-500 truncate">{conv.lastMessage}</div>
-            </button>
+              <button
+                onClick={() => setCurrentConversationId(conv.id)}
+                className="w-full p-3 text-left flex flex-col gap-1"
+              >
+                <div className="font-medium truncate">{conv.title}</div>
+                <div className="text-xs text-gray-500 truncate">{conv.lastMessage}</div>
+              </button>
+              <button
+                onClick={(e) => deleteConversation(conv.id, e)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-2 text-gray-500 hover:text-red-500"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           ))}
         </div>
         
