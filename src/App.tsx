@@ -55,14 +55,16 @@ function App() {
     return unsubscribe;
   }, []);
 
-  // New: Authentication listener
+  // Authentication listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
       if (user) {
         await loadConversations(user.uid);
-        // Create a new conversation immediately after login
-        await createNewConversation();
+        // Create a new conversation immediately after login if there isn't one selected
+        if (!currentConversationId) {
+          await createNewConversation();
+        }
       } else {
         setMessageHistory([]);
         setConversations([]);
@@ -71,7 +73,7 @@ function App() {
     });
 
     return () => unsubscribe();
-  }, [loadConversations]);
+  }, [loadConversations, currentConversationId]);
 
   useEffect(() => {
     if (user && currentConversationId) {
