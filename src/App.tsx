@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { auth, db } from './firebase';
-import { collection, addDoc, query, orderBy, where, onSnapshot, doc, updateDoc, deleteDoc, getDocs, limit } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, where, onSnapshot, doc, updateDoc, deleteDoc, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { SignIn } from './components/SignIn';
 
@@ -61,23 +61,8 @@ function App() {
       setUser(user);
       if (user) {
         await loadConversations(user.uid);
-        // Create a new conversation if there are no existing conversations
-        const q = query(
-          collection(db, 'conversations'),
-          where('userId', '==', user.uid),
-          orderBy('timestamp', 'desc'),
-          limit(1)
-        );
-        const snapshot = await getDocs(q);
-        if (snapshot.empty) {
-          const newConversation = await createNewConversation();
-          if (newConversation) {
-            setCurrentConversationId(newConversation.id);
-          }
-        } else {
-          // Set the most recent conversation as current
-          setCurrentConversationId(snapshot.docs[0].id);
-        }
+        // Create a new conversation immediately after login
+        await createNewConversation();
       } else {
         setMessageHistory([]);
         setConversations([]);
@@ -95,7 +80,7 @@ function App() {
   }, [currentConversationId, user]);
 
   const createNewConversation = async () => {
-    if (!user) return null;
+    if (!user) return;
     
     const newConversation: Omit<Conversation, 'id'> = {
       title: 'New Conversation',
@@ -104,13 +89,8 @@ function App() {
       lastMessage: ''
     };
 
-    try {
-      const docRef = await addDoc(collection(db, 'conversations'), newConversation);
-      return { id: docRef.id, ...newConversation };
-    } catch (error) {
-      console.error('Error creating new conversation:', error);
-      return null;
-    }
+    const docRef = await addDoc(collection(db, 'conversations'), newConversation);
+    setCurrentConversationId(docRef.id);
   };
 
   // Update loadMessages to filter by conversationId
