@@ -167,13 +167,19 @@ function App() {
       // Save AI response to Firestore
       await addDoc(collection(db, 'messages'), aiMessage);
 
-      // Update conversation title and last message
+      // Update conversation last message
       const conversationRef = doc(db, 'conversations', currentConversationId);
-      await updateDoc(conversationRef, {
-        title: messageHistory.length === 0 ? message.slice(0, 50) : undefined,
+      const updateData: { lastMessage: string; timestamp: string; title?: string } = {
         lastMessage: data.text.slice(0, 100),
         timestamp: new Date().toISOString()
-      });
+      };
+      
+      // Only set title if this is the first message
+      if (messageHistory.length === 0) {
+        updateData.title = message.slice(0, 50);
+      }
+      
+      await updateDoc(conversationRef, updateData);
       
       // Always play audio response
       if (data.audio) {
