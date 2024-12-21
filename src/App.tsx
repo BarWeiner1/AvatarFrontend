@@ -132,7 +132,9 @@ function App() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
+        mode: 'cors',
         body: JSON.stringify({ 
           message,
           context: conversationContext // Send full conversation context
