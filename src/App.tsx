@@ -98,7 +98,6 @@ function App() {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const messages = snapshot.docs.map(doc => doc.data() as Message);
       setMessageHistory(messages);
-      setResponse(messages.length > 0 ? messages[messages.length - 1].text : '');
     });
 
     return unsubscribe;
@@ -184,7 +183,6 @@ function App() {
       }
     } catch (error) {
       console.error('Error:', error);
-      setResponse('Sorry, there was an error processing your request.');
     } finally {
       setIsLoading(false);
       setMessage('');
