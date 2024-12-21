@@ -50,22 +50,19 @@ function App() {
         ...doc.data()
       } as Conversation));
       setConversations(conversationsData);
-      
-      // Set current conversation to the most recent one if none selected
-      if (!currentConversationId && conversationsData.length > 0) {
-        setCurrentConversationId(conversationsData[0].id);
-      }
     });
 
     return unsubscribe;
-  }, [currentConversationId]);
+  }, []);
 
   // New: Authentication listener
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
       if (user) {
-        loadConversations(user.uid);
+        await loadConversations(user.uid);
+        // Create a new conversation immediately after login
+        await createNewConversation();
       } else {
         setMessageHistory([]);
         setConversations([]);
