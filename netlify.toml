@@ -13,4 +13,17 @@
 [[headers]]
   for = "/*"
   [headers.values]
-    Content-Security-Policy = "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;"
+    Content-Security-Policy = """
+      default-src 'self' https: http:;
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' https: http:;
+      style-src 'self' 'unsafe-inline' https:;
+      img-src 'self' data: https: http:;
+      media-src 'self' data: https: http:;
+      connect-src 'self' https: http: ws: wss:;
+      font-src 'self' data: https:;
+      object-src 'none';
+      base-uri 'self';
+      form-action 'self';
+      frame-ancestors 'none';
+      frame-src 'self' https: http:;
+      """
