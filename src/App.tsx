@@ -239,25 +239,19 @@ function App() {
           // Set up event listeners before setting source
           const playAudio = async () => {
             try {
-              await audio.play();
-            } catch (error) {
-              console.error('Playback error:', error);
-              // For iOS, try playing again after a user interaction
-              const playButton = document.createElement('button');
-              playButton.textContent = 'Tap to Play Response';
-              playButton.className = 'px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 mt-2';
-              playButton.onclick = async () => {
+              // Try playing multiple times with small delays
+              for (let i = 0; i < 3; i++) {
                 try {
                   await audio.play();
-                  playButton.remove();
-                } catch (retryError) {
-                  console.error('Retry playback failed:', retryError);
+                  break; // If successful, exit the loop
+                } catch (error) {
+                  if (i < 2) { // Don't wait on the last attempt
+                    await new Promise(resolve => setTimeout(resolve, 100 * (i + 1)));
+                  }
                 }
-              };
-              const messageContainer = document.querySelector('.space-y-4');
-              if (messageContainer) {
-                messageContainer.appendChild(playButton);
               }
+            } catch (error) {
+              console.error('Final playback attempt failed:', error);
             }
           };
 
