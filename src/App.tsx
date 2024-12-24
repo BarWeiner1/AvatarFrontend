@@ -4,10 +4,13 @@ import { collection, addDoc, query, orderBy, where, onSnapshot, doc, updateDoc, 
 import { onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { SignIn } from './components/SignIn';
 
-// Add type declaration for window.currentAudio
+// Add type declaration for window.currentAudio and HTMLAudioElement
 declare global {
   interface Window {
     currentAudio: HTMLAudioElement | null;
+  }
+  interface HTMLAudioElement {
+    playsInline: boolean;
   }
 }
 
@@ -216,7 +219,7 @@ function App() {
           
           // Set up audio properties before loading the source
           audio.preload = 'auto';
-          audio.playsinline = true;
+          audio.playsInline = true;
           
           // Make sure previous audio is stopped before playing new one
           if (window.currentAudio) {
