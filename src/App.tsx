@@ -209,29 +209,53 @@ function App() {
         try {
           const audioBlob = new Blob(
             [Uint8Array.from(atob(data.audio), c => c.charCodeAt(0))], 
-            { type: 'audio/mpeg' }
+            { type: 'audio/mp3; codecs=mp3' }
           );
           const audioUrl = URL.createObjectURL(audioBlob);
-          const audio = new Audio(audioUrl);
-
+          const audio = new Audio();
+          
+          // Set up audio properties before loading the source
+          audio.preload = 'auto';
+          audio.playsinline = true;
+          
           // Make sure previous audio is stopped before playing new one
           if (window.currentAudio) {
             window.currentAudio.pause();
+            window.currentAudio.src = '';
             URL.revokeObjectURL(window.currentAudio.src);
           }
-          window.currentAudio = audio;
-
-          await audio.play().catch(error => {
-            console.error('Error playing audio:', error);
-          });
           
-          // Clean up the URL after playing
-          audio.onended = () => {
+          // Set up event listeners
+          audio.addEventListener('canplaythrough', async () => {
+            try {
+              // Attempt to play with user gesture requirement handling
+              const playPromise = audio.play();
+              if (playPromise !== undefined) {
+                await playPromise;
+              }
+            } catch (playError) {
+              console.error('Error during audio playback:', playError);
+              // If autoplay failed, we might want to show a play button
+              // or retry with user interaction
+            }
+          });
+
+          audio.addEventListener('error', (e) => {
+            console.error('Audio error:', e);
+          });
+
+          // Clean up when done
+          audio.addEventListener('ended', () => {
             URL.revokeObjectURL(audioUrl);
             window.currentAudio = null;
-          };
+          });
+
+          // Set the source last
+          audio.src = audioUrl;
+          window.currentAudio = audio;
+
         } catch (audioError) {
-          console.error('Error playing audio:', audioError);
+          console.error('Error setting up audio:', audioError);
         }
       }
     } catch (error) {
