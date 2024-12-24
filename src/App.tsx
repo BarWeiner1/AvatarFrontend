@@ -210,55 +210,77 @@ function App() {
       // Always play audio response
       if (data.audio) {
         try {
-          const audioBlob = new Blob(
-            [Uint8Array.from(atob(data.audio), c => c.charCodeAt(0))], 
-            { type: 'audio/mp3; codecs=mp3' }
-          );
-          const audioUrl = URL.createObjectURL(audioBlob);
+          // Convert base64 to blob with explicit typing for iOS
+          const byteCharacters = atob(data.audio);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          const audioBlob = new Blob([byteArray], { type: 'audio/mpeg' });
+          
+          // Create audio element with specific attributes for iOS
           const audio = new Audio();
-          
-          // Set up audio properties before loading the source
+          audio.setAttribute('playsinline', 'true');
+          audio.setAttribute('webkit-playsinline', 'true');
           audio.preload = 'auto';
-          audio.playsInline = true;
           
-          // Make sure previous audio is stopped before playing new one
+          // Stop any currently playing audio
           if (window.currentAudio) {
             window.currentAudio.pause();
             window.currentAudio.src = '';
             URL.revokeObjectURL(window.currentAudio.src);
+            window.currentAudio = null;
           }
+
+          // Create object URL
+          const audioUrl = URL.createObjectURL(audioBlob);
           
-          // Set up event listeners
-          audio.addEventListener('canplaythrough', async () => {
+          // Set up event listeners before setting source
+          const playAudio = async () => {
             try {
-              // Attempt to play with user gesture requirement handling
-              const playPromise = audio.play();
-              if (playPromise !== undefined) {
-                await playPromise;
+              await audio.play();
+            } catch (error) {
+              console.error('Playback error:', error);
+              // For iOS, try playing again after a user interaction
+              const playButton = document.createElement('button');
+              playButton.textContent = 'Tap to Play Response';
+              playButton.className = 'px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 mt-2';
+              playButton.onclick = async () => {
+                try {
+                  await audio.play();
+                  playButton.remove();
+                } catch (retryError) {
+                  console.error('Retry playback failed:', retryError);
+                }
+              };
+              const messageContainer = document.querySelector('.space-y-4');
+              if (messageContainer) {
+                messageContainer.appendChild(playButton);
               }
-            } catch (playError) {
-              console.error('Error during audio playback:', playError);
-              // If autoplay failed, we might want to show a play button
-              // or retry with user interaction
             }
-          });
+          };
 
+          audio.addEventListener('canplaythrough', playAudio, { once: true });
+          
           audio.addEventListener('error', (e) => {
-            console.error('Audio error:', e);
+            console.error('Audio loading error:', e);
           });
 
-          // Clean up when done
           audio.addEventListener('ended', () => {
             URL.revokeObjectURL(audioUrl);
             window.currentAudio = null;
           });
 
-          // Set the source last
+          // Set source and store reference
           audio.src = audioUrl;
           window.currentAudio = audio;
+          
+          // Load the audio
+          await audio.load();
 
         } catch (audioError) {
-          console.error('Error setting up audio:', audioError);
+          console.error('Audio setup error:', audioError);
         }
       }
     } catch (error) {
