@@ -30,6 +30,7 @@ interface Conversation {
   userId: string;
   timestamp: string;
   lastMessage: string;
+  context?: string;  // Add optional context field
 }
 
 function App() {
@@ -39,6 +40,8 @@ function App() {
   const [user, setUser] = useState<User | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [isAddingContext, setIsAddingContext] = useState(false);
+  const [contextInput, setContextInput] = useState('');
 
   const loadConversations = useCallback(async (userId: string) => {
     const q = query(
@@ -153,6 +156,7 @@ function App() {
       await addDoc(collection(db, 'messages'), userMessage);
       
       // Get full conversation context with better structure
+      const currentConversation = conversations.find(c => c.id === currentConversationId);
       const conversationContext = messageHistory
         .map(msg => ({
           role: msg.isUser ? 'user' : 'assistant',
@@ -161,6 +165,11 @@ function App() {
         }))
         .map(msg => JSON.stringify(msg))
         .join('\n---\n');
+
+      // Add saved context if it exists
+      const fullContext = currentConversation?.context 
+        ? `Background Context:\n${currentConversation.context}\n\nConversation History:\n${conversationContext}`
+        : conversationContext;
 
       const res = await fetch('https://michael-levitt-ai-backend-a5ed710976c3.herokuapp.com/api/chat', {
         method: 'POST',
@@ -173,7 +182,7 @@ function App() {
         credentials: 'omit',
         body: JSON.stringify({ 
           message,
-          context: conversationContext,
+          context: fullContext,
           messageHistory: messageHistory.slice(-5) // Send last 5 messages for immediate context
         }),
       });
@@ -322,6 +331,22 @@ function App() {
     }
   };
 
+  // Add function to handle context addition
+  const handleAddContext = async () => {
+    if (!currentConversationId || !contextInput.trim()) return;
+
+    try {
+      const conversationRef = doc(db, 'conversations', currentConversationId);
+      await updateDoc(conversationRef, {
+        context: contextInput
+      });
+      setIsAddingContext(false);
+      setContextInput('');
+    } catch (error) {
+      console.error('Error adding context:', error);
+    }
+  };
+
   // New: Show sign in page if no user
   if (!user) {
     return <SignIn />;
@@ -391,67 +416,127 @@ function App() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
-        <div className="flex-1 p-6 flex flex-col max-w-4xl mx-auto w-full">
-          <div className="mb-6">
-            <div className="w-24 h-24 mx-auto mb-4 overflow-hidden rounded-lg shadow-md">
-              <img
-                src="/michael-levitt.jpg"
-                alt="Michael Levitt"
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <div className="text-2xl font-bold text-center">
-              Chat with Michael Levitt AI
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto mb-4">
-            <div className="space-y-4">
-              {messageHistory.map((msg, index) => (
-                <div
-                  key={index}
-                  className={`p-4 rounded-lg ${
-                    msg.isUser ? 'bg-blue-100 ml-12' : 'bg-gray-100 mr-12'
-                  }`}
-                >
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="font-medium">
-                      {msg.isUser ? user.displayName || 'You' : 'Michael Levitt AI'}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {msg.timestamp}
-                    </span>
-                  </div>
-                  <div>{msg.text}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <form onSubmit={handleSubmit} className="flex gap-2">
-            <input
-              type="text"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Type your message..."
-              disabled={isLoading || !currentConversationId}
-              id="message-input"
-              name="message"
-              className="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+      <div className="flex-1 flex flex-col h-screen">
+        {/* Header with Michael's image and context button */}
+        <div className="p-6 bg-white border-b">
+          <div className="flex justify-end mb-4">
             <button
-              type="submit"
-              disabled={isLoading || !currentConversationId}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
+              onClick={() => setIsAddingContext(true)}
+              className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg flex items-center gap-1"
             >
-              {isLoading ? (
-                <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                'Send'
-              )}
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              Add Context
             </button>
-          </form>
+          </div>
+          <div className="w-24 h-24 mx-auto mb-4 overflow-hidden rounded-lg shadow-md">
+            <img
+              src="/michael-levitt.jpg"
+              alt="Michael Levitt"
+              className="w-full h-full object-cover"
+            />
+          </div>
+          <div className="text-2xl font-bold text-center">
+            Chat with Michael Levitt AI
+          </div>
+          
+          {/* Context Modal */}
+          {isAddingContext && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-lg p-6 max-w-md w-full">
+                <h3 className="text-lg font-semibold mb-4">Add Conversation Context</h3>
+                <textarea
+                  value={contextInput}
+                  onChange={(e) => setContextInput(e.target.value)}
+                  placeholder="Add any relevant context for this conversation..."
+                  className="w-full h-32 p-2 border rounded-lg mb-4 resize-none"
+                />
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => {
+                      setIsAddingContext(false);
+                      setContextInput('');
+                    }}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleAddContext}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                  >
+                    Save Context
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Show current context if it exists */}
+        {currentConversationId && conversations.find(c => c.id === currentConversationId)?.context && (
+          <div className="px-6 py-3 bg-yellow-50 border-b">
+            <div className="max-w-4xl mx-auto">
+              <div className="text-sm text-gray-600">
+                <span className="font-medium">Context: </span>
+                {conversations.find(c => c.id === currentConversationId)?.context}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Messages Container */}
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="space-y-4 max-w-4xl mx-auto">
+            {messageHistory.map((msg, index) => (
+              <div
+                key={index}
+                className={`p-4 rounded-lg ${
+                  msg.isUser ? 'bg-blue-100 ml-12' : 'bg-gray-100 mr-12'
+                }`}
+              >
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-medium">
+                    {msg.isUser ? user.displayName || 'You' : 'Michael Levitt AI'}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {msg.timestamp}
+                  </span>
+                </div>
+                <div>{msg.text}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Input Form - Fixed at bottom */}
+        <div className="p-6 bg-white border-t">
+          <div className="max-w-4xl mx-auto">
+            <form onSubmit={handleSubmit} className="flex gap-2">
+              <input
+                type="text"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Type your message..."
+                disabled={isLoading || !currentConversationId}
+                id="message-input"
+                name="message"
+                className="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                type="submit"
+                disabled={isLoading || !currentConversationId}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
+              >
+                {isLoading ? (
+                  <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  'Send'
+                )}
+              </button>
+            </form>
+          </div>
         </div>
       </div>
     </div>
