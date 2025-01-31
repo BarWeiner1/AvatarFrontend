@@ -368,9 +368,9 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
-      {/* Sidebar */}
-      <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
+    <div className="min-h-screen flex">
+      {/* Sidebar - Fixed width, full height, scrollable content */}
+      <div className="w-64 flex flex-col bg-white border-r border-gray-200">
         <div className="p-4 border-b">
           <div className="flex items-center gap-3 mb-4">
             {user.photoURL && (
@@ -393,6 +393,7 @@ function App() {
           </button>
         </div>
         
+        {/* Conversations List - Scrollable */}
         <div className="flex-1 overflow-y-auto">
           {conversations.map((conv) => (
             <div
@@ -419,8 +420,9 @@ function App() {
             </div>
           ))}
         </div>
-        
-        <div className="p-3 border-t">
+
+        {/* Sign Out - Fixed at bottom */}
+        <div className="p-3 border-t mt-auto">
           <button
             onClick={handleSignOut}
             className="w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded"
@@ -430,10 +432,10 @@ function App() {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col h-screen">
-        {/* Fixed Header */}
-        <div className="flex items-center justify-between px-6 py-4 bg-white border-b">
+      {/* Main Content Area - Flex column with fixed header and footer */}
+      <div className="flex-1 flex flex-col bg-white">
+        {/* Header - Fixed */}
+        <div className="flex items-center justify-between px-6 py-4 border-b bg-white">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 overflow-hidden rounded-lg shadow-md">
               <img
@@ -446,25 +448,26 @@ function App() {
               <h1 className="text-xl font-bold text-gray-800">
                 Chat with Michael Levitt AI
               </h1>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setIsAddingContext(true)}
-                  className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                  </svg>
-                  Edit Context
-                </button>
-              </div>
+              <button
+                onClick={() => {
+                  setContextInput(globalContext); // Set current context when opening modal
+                  setIsAddingContext(true);
+                }}
+                className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+                Edit Context
+              </button>
             </div>
           </div>
         </div>
 
         {/* Messages Container - Scrollable */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto bg-gray-50">
           <div className="max-w-4xl mx-auto">
-            <div className="space-y-4 p-6 pb-24">
+            <div className="space-y-4 p-6">
               {messageHistory.map((msg, index) => (
                 <div
                   key={index}
@@ -510,8 +513,7 @@ function App() {
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 3a1 1 0 00-1 1v4.586L5.707 5.293a1 1 0 00-1.414 1.414l4 4a1 1 0 001.414 0l4-4a1 1 0 00-1.414-1.414L10 8.586V4a1 1 0 00-1-1z" clipRule="evenodd" />
-                    <path fillRule="evenodd" d="M2 10a8 8 0 1116 0c0 2.098-.8 4.018-2.115 5.467l-1.42-1.42A6 6 0 104 10a6 6 0 001.43 3.887l-1.42 1.42A7.973 7.973 0 012 10z" clipRule="evenodd" />
+                    <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
                   </svg>
                 )}
               </button>
@@ -538,7 +540,7 @@ function App() {
                 This context will be used as background information for all your conversations with Michael Levitt AI.
               </p>
               <textarea
-                value={contextInput || globalContext}
+                value={contextInput}
                 onChange={(e) => setContextInput(e.target.value)}
                 placeholder="Add any relevant context that will be used in all conversations..."
                 className="w-full h-64 p-4 border rounded-lg mb-4 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
