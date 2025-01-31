@@ -431,20 +431,9 @@ function App() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header with Michael's image and context button */}
+      <div className="flex-1 flex flex-col h-screen">
+        {/* Header with Michael's image */}
         <div className="p-6 bg-white border-b">
-          <div className="flex justify-end mb-4">
-            <button
-              onClick={() => setIsAddingContext(true)}
-              className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg flex items-center gap-1"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Add Global Context
-            </button>
-          </div>
           <div className="w-24 h-24 mx-auto mb-4 overflow-hidden rounded-lg shadow-md">
             <img
               src="/michael-levitt.jpg"
@@ -455,57 +444,35 @@ function App() {
           <div className="text-2xl font-bold text-center">
             Chat with Michael Levitt AI
           </div>
-          
-          {/* Context Modal */}
-          {isAddingContext && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-              <div className="bg-white rounded-lg p-6 max-w-md w-full">
-                <h3 className="text-lg font-semibold mb-4">Add Global Context</h3>
-                <textarea
-                  value={contextInput}
-                  onChange={(e) => setContextInput(e.target.value)}
-                  placeholder="Add any relevant context for this conversation..."
-                  className="w-full h-32 p-2 border rounded-lg mb-4 resize-none"
-                />
-                <div className="flex justify-end gap-2">
-                  <button
-                    onClick={() => {
-                      setIsAddingContext(false);
-                      setContextInput('');
-                    }}
-                    className="px-4 py-2 text-gray-600 hover:text-gray-800"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleAddContext}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-                  >
-                    Save Context
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
-        {/* Show global context if it exists */}
-        {globalContext && (
-          <div className="px-6 py-3 bg-yellow-50 border-b">
-            <div className="max-w-4xl mx-auto">
-              <div className="text-sm text-gray-600">
-                <span className="font-medium">Global Context: </span>
-                {globalContext}
-              </div>
+        {/* Context Section */}
+        <div className="bg-gray-50 border-b">
+          <div className="max-w-4xl mx-auto p-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-medium text-gray-700">Conversation Context</h3>
+              <button
+                onClick={() => setIsAddingContext(true)}
+                className="px-3 py-1 text-sm bg-white hover:bg-gray-50 text-gray-700 rounded-lg flex items-center gap-1 border border-gray-200"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+                Edit Context
+              </button>
+            </div>
+            <div className="bg-white rounded-lg border border-gray-200 p-3">
+              <p className="text-sm text-gray-600">
+                {globalContext || "No context set. Click 'Edit Context' to add background information that will be used in all conversations."}
+              </p>
             </div>
           </div>
-        )}
+        </div>
 
-        {/* Messages Container */}
+        {/* Messages Container - Scrollable */}
         <div className="flex-1 overflow-y-auto">
-          <div className="p-6">
-            <div className="max-w-4xl mx-auto space-y-4">
-              {/* Messages */}
+          <div className="max-w-4xl mx-auto">
+            <div className="space-y-4 p-6 pb-24">
               {messageHistory.map((msg, index) => (
                 <div
                   key={index}
@@ -524,36 +491,72 @@ function App() {
                   <div>{msg.text}</div>
                 </div>
               ))}
-
-              {/* Input Form */}
-              <div className="sticky bottom-6 bg-white rounded-lg shadow-lg p-4 mt-4">
-                <form onSubmit={handleSubmit} className="flex gap-2">
-                  <input
-                    type="text"
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Type your message..."
-                    disabled={isLoading || !currentConversationId}
-                    id="message-input"
-                    name="message"
-                    className="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <button
-                    type="submit"
-                    disabled={isLoading || !currentConversationId}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
-                  >
-                    {isLoading ? (
-                      <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      'Send'
-                    )}
-                  </button>
-                </form>
-              </div>
             </div>
           </div>
         </div>
+
+        {/* Input Form - Fixed at bottom */}
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-transparent pt-6">
+          <div className="max-w-4xl mx-auto px-6 pb-6">
+            <form onSubmit={handleSubmit} className="flex gap-2 bg-white rounded-lg border border-gray-200 shadow-lg">
+              <input
+                type="text"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Type your message..."
+                disabled={isLoading || !currentConversationId}
+                id="message-input"
+                name="message"
+                className="flex-1 px-4 py-3 bg-transparent focus:outline-none"
+              />
+              <button
+                type="submit"
+                disabled={isLoading || !currentConversationId}
+                className="px-4 py-3 text-blue-500 hover:text-blue-600 disabled:opacity-50"
+              >
+                {isLoading ? (
+                  <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                  </svg>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+
+        {/* Context Modal */}
+        {isAddingContext && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full">
+              <h3 className="text-lg font-semibold mb-4">Edit Global Context</h3>
+              <textarea
+                value={contextInput}
+                onChange={(e) => setContextInput(e.target.value)}
+                placeholder="Add any relevant context that will be used in all conversations..."
+                className="w-full h-48 p-3 border rounded-lg mb-4 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => {
+                    setIsAddingContext(false);
+                    setContextInput('');
+                  }}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddContext}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                >
+                  Save Context
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
