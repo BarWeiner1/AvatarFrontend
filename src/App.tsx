@@ -368,11 +368,11 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen flex">
-      {/* Sidebar - Fixed width, full height, scrollable content */}
+    <div className="h-screen flex overflow-hidden">
+      {/* Sidebar - Fixed width and height */}
       <div className="w-64 flex flex-col bg-white border-r border-gray-200">
-        {/* User Profile and New Chat - Fixed */}
-        <div className="p-4 border-b">
+        {/* User Profile and New Chat - Fixed height */}
+        <div className="shrink-0 p-4 border-b">
           <div className="flex items-center gap-3 mb-4">
             {user.photoURL && (
               <img 
@@ -394,8 +394,8 @@ function App() {
           </button>
         </div>
         
-        {/* Conversations List - Scrollable with fixed height */}
-        <div className="flex-1 overflow-y-auto min-h-0">
+        {/* Conversations List - Scrollable */}
+        <div className="flex-1 overflow-y-auto">
           {conversations.map((conv) => (
             <div
               key={conv.id}
@@ -422,8 +422,8 @@ function App() {
           ))}
         </div>
 
-        {/* Sign Out - Fixed height to match input box */}
-        <div className="border-t bg-white py-4 px-3">
+        {/* Sign Out - Fixed height */}
+        <div className="shrink-0 border-t bg-white py-4 px-3">
           <button
             onClick={handleSignOut}
             className="w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded"
@@ -433,10 +433,10 @@ function App() {
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col bg-white">
-        {/* Header - Fixed */}
-        <div className="flex items-center justify-between px-6 py-4 border-b bg-white">
+      {/* Main Content Area - Fixed height */}
+      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+        {/* Header - Fixed height */}
+        <div className="shrink-0 flex items-center justify-between px-6 py-4 border-b bg-white">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 overflow-hidden rounded-lg shadow-md">
               <img
@@ -466,7 +466,7 @@ function App() {
         </div>
 
         {/* Messages Container - Scrollable */}
-        <div className="flex-1 overflow-y-auto bg-gray-50 min-h-0">
+        <div className="flex-1 overflow-y-auto bg-gray-50">
           <div className="max-w-4xl mx-auto">
             <div className="space-y-4 p-6">
               {messageHistory.map((msg, index) => (
@@ -491,8 +491,8 @@ function App() {
           </div>
         </div>
 
-        {/* Input Form - Fixed height to match sign out */}
-        <div className="border-t bg-white py-4">
+        {/* Input Form - Fixed height */}
+        <div className="shrink-0 border-t bg-white py-4">
           <div className="max-w-4xl mx-auto px-6">
             <form onSubmit={handleSubmit} className="flex gap-2">
               <input
