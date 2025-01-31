@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { auth, db } from './firebase';
-import { collection, addDoc, query, orderBy, where, onSnapshot, doc, updateDoc, deleteDoc, getDocs } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, where, onSnapshot, doc, updateDoc, deleteDoc, getDocs, getDoc, setDoc } from 'firebase/firestore';
 import { onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { SignIn } from './components/SignIn';
 
@@ -30,7 +30,6 @@ interface Conversation {
   userId: string;
   timestamp: string;
   lastMessage: string;
-  context?: string;  // Add optional context field
 }
 
 function App() {
@@ -42,6 +41,7 @@ function App() {
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [isAddingContext, setIsAddingContext] = useState(false);
   const [contextInput, setContextInput] = useState('');
+  const [globalContext, setGlobalContext] = useState<string>('');
 
   const loadConversations = useCallback(async (userId: string) => {
     const q = query(
@@ -135,6 +135,39 @@ function App() {
     return unsubscribe;
   };
 
+  // Load global context on startup
+  useEffect(() => {
+    const loadGlobalContext = async () => {
+      if (user) {
+        const docRef = doc(db, 'users', user.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setGlobalContext(docSnap.data().globalContext || '');
+        }
+      }
+    };
+    loadGlobalContext();
+  }, [user]);
+
+  // Add function to handle context addition
+  const handleAddContext = async () => {
+    if (!user || !contextInput.trim()) return;
+
+    try {
+      // Save context to user document instead of conversation
+      const userRef = doc(db, 'users', user.uid);
+      await setDoc(userRef, {
+        globalContext: contextInput
+      }, { merge: true });
+      
+      setGlobalContext(contextInput);
+      setIsAddingContext(false);
+      setContextInput('');
+    } catch (error) {
+      console.error('Error adding context:', error);
+    }
+  };
+
   // Updated handleSubmit to include user context and Firebase
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,21 +175,19 @@ function App() {
 
     setIsLoading(true);
     
-    // Create user message
-    const userMessage: Message = {
-      text: message,
-      isUser: true,
-      timestamp: new Date().toLocaleTimeString(),
-      userId: user.uid,
-      conversationId: currentConversationId
-    };
-
     try {
-      // Save user message to Firestore
+      // Create user message
+      const userMessage: Message = {
+        text: message,
+        isUser: true,
+        timestamp: new Date().toLocaleTimeString(),
+        userId: user.uid,
+        conversationId: currentConversationId
+      };
+
       await addDoc(collection(db, 'messages'), userMessage);
       
-      // Get full conversation context with better structure
-      const currentConversation = conversations.find(c => c.id === currentConversationId);
+      // Get conversation context with global context included
       const conversationContext = messageHistory
         .map(msg => ({
           role: msg.isUser ? 'user' : 'assistant',
@@ -166,9 +197,9 @@ function App() {
         .map(msg => JSON.stringify(msg))
         .join('\n---\n');
 
-      // Add saved context if it exists
-      const fullContext = currentConversation?.context 
-        ? `Background Context:\n${currentConversation.context}\n\nConversation History:\n${conversationContext}`
+      // Add global context if it exists
+      const fullContext = globalContext 
+        ? `Global Context:\n${globalContext}\n\nConversation History:\n${conversationContext}`
         : conversationContext;
 
       const res = await fetch('https://michael-levitt-ai-backend-a5ed710976c3.herokuapp.com/api/chat', {
@@ -331,22 +362,6 @@ function App() {
     }
   };
 
-  // Add function to handle context addition
-  const handleAddContext = async () => {
-    if (!currentConversationId || !contextInput.trim()) return;
-
-    try {
-      const conversationRef = doc(db, 'conversations', currentConversationId);
-      await updateDoc(conversationRef, {
-        context: contextInput
-      });
-      setIsAddingContext(false);
-      setContextInput('');
-    } catch (error) {
-      console.error('Error adding context:', error);
-    }
-  };
-
   // New: Show sign in page if no user
   if (!user) {
     return <SignIn />;
@@ -416,7 +431,7 @@ function App() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col h-screen">
+      <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header with Michael's image and context button */}
         <div className="p-6 bg-white border-b">
           <div className="flex justify-end mb-4">
@@ -427,7 +442,7 @@ function App() {
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
               </svg>
-              Add Context
+              Add Global Context
             </button>
           </div>
           <div className="w-24 h-24 mx-auto mb-4 overflow-hidden rounded-lg shadow-md">
@@ -445,7 +460,7 @@ function App() {
           {isAddingContext && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
               <div className="bg-white rounded-lg p-6 max-w-md w-full">
-                <h3 className="text-lg font-semibold mb-4">Add Conversation Context</h3>
+                <h3 className="text-lg font-semibold mb-4">Add Global Context</h3>
                 <textarea
                   value={contextInput}
                   onChange={(e) => setContextInput(e.target.value)}
@@ -474,68 +489,69 @@ function App() {
           )}
         </div>
 
-        {/* Show current context if it exists */}
-        {currentConversationId && conversations.find(c => c.id === currentConversationId)?.context && (
+        {/* Show global context if it exists */}
+        {globalContext && (
           <div className="px-6 py-3 bg-yellow-50 border-b">
             <div className="max-w-4xl mx-auto">
               <div className="text-sm text-gray-600">
-                <span className="font-medium">Context: </span>
-                {conversations.find(c => c.id === currentConversationId)?.context}
+                <span className="font-medium">Global Context: </span>
+                {globalContext}
               </div>
             </div>
           </div>
         )}
 
         {/* Messages Container */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="space-y-4 max-w-4xl mx-auto">
-            {messageHistory.map((msg, index) => (
-              <div
-                key={index}
-                className={`p-4 rounded-lg ${
-                  msg.isUser ? 'bg-blue-100 ml-12' : 'bg-gray-100 mr-12'
-                }`}
-              >
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-medium">
-                    {msg.isUser ? user.displayName || 'You' : 'Michael Levitt AI'}
-                  </span>
-                  <span className="text-xs text-gray-500">
-                    {msg.timestamp}
-                  </span>
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-6">
+            <div className="max-w-4xl mx-auto space-y-4">
+              {/* Messages */}
+              {messageHistory.map((msg, index) => (
+                <div
+                  key={index}
+                  className={`p-4 rounded-lg ${
+                    msg.isUser ? 'bg-blue-100 ml-12' : 'bg-gray-100 mr-12'
+                  }`}
+                >
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="font-medium">
+                      {msg.isUser ? user.displayName || 'You' : 'Michael Levitt AI'}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {msg.timestamp}
+                    </span>
+                  </div>
+                  <div>{msg.text}</div>
                 </div>
-                <div>{msg.text}</div>
-              </div>
-            ))}
-          </div>
-        </div>
+              ))}
 
-        {/* Input Form - Fixed at bottom */}
-        <div className="p-6 bg-white border-t">
-          <div className="max-w-4xl mx-auto">
-            <form onSubmit={handleSubmit} className="flex gap-2">
-              <input
-                type="text"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Type your message..."
-                disabled={isLoading || !currentConversationId}
-                id="message-input"
-                name="message"
-                className="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <button
-                type="submit"
-                disabled={isLoading || !currentConversationId}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
-              >
-                {isLoading ? (
-                  <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  'Send'
-                )}
-              </button>
-            </form>
+              {/* Input Form */}
+              <div className="sticky bottom-6 bg-white rounded-lg shadow-lg p-4 mt-4">
+                <form onSubmit={handleSubmit} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    placeholder="Type your message..."
+                    disabled={isLoading || !currentConversationId}
+                    id="message-input"
+                    name="message"
+                    className="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isLoading || !currentConversationId}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
+                  >
+                    {isLoading ? (
+                      <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      'Send'
+                    )}
+                  </button>
+                </form>
+              </div>
+            </div>
           </div>
         </div>
       </div>
