@@ -371,6 +371,7 @@ function App() {
     <div className="min-h-screen flex">
       {/* Sidebar - Fixed width, full height, scrollable content */}
       <div className="w-64 flex flex-col bg-white border-r border-gray-200">
+        {/* User Profile and New Chat - Fixed */}
         <div className="p-4 border-b">
           <div className="flex items-center gap-3 mb-4">
             {user.photoURL && (
@@ -393,8 +394,8 @@ function App() {
           </button>
         </div>
         
-        {/* Conversations List - Scrollable */}
-        <div className="flex-1 overflow-y-auto">
+        {/* Conversations List - Scrollable with fixed height */}
+        <div className="flex-1 overflow-y-auto min-h-0">
           {conversations.map((conv) => (
             <div
               key={conv.id}
@@ -421,8 +422,8 @@ function App() {
           ))}
         </div>
 
-        {/* Sign Out - Fixed at bottom */}
-        <div className="p-3 border-t mt-auto">
+        {/* Sign Out - Fixed height to match input box */}
+        <div className="border-t bg-white py-4 px-3">
           <button
             onClick={handleSignOut}
             className="w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded"
@@ -432,7 +433,7 @@ function App() {
         </div>
       </div>
 
-      {/* Main Content Area - Flex column with fixed header and footer */}
+      {/* Main Content Area */}
       <div className="flex-1 flex flex-col bg-white">
         {/* Header - Fixed */}
         <div className="flex items-center justify-between px-6 py-4 border-b bg-white">
@@ -450,7 +451,7 @@ function App() {
               </h1>
               <button
                 onClick={() => {
-                  setContextInput(globalContext); // Set current context when opening modal
+                  setContextInput(globalContext);
                   setIsAddingContext(true);
                 }}
                 className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
@@ -465,7 +466,7 @@ function App() {
         </div>
 
         {/* Messages Container - Scrollable */}
-        <div className="flex-1 overflow-y-auto bg-gray-50">
+        <div className="flex-1 overflow-y-auto bg-gray-50 min-h-0">
           <div className="max-w-4xl mx-auto">
             <div className="space-y-4 p-6">
               {messageHistory.map((msg, index) => (
@@ -490,9 +491,9 @@ function App() {
           </div>
         </div>
 
-        {/* Input Form - Fixed at bottom */}
-        <div className="border-t bg-white">
-          <div className="max-w-4xl mx-auto px-6 py-4">
+        {/* Input Form - Fixed height to match sign out */}
+        <div className="border-t bg-white py-4">
+          <div className="max-w-4xl mx-auto px-6">
             <form onSubmit={handleSubmit} className="flex gap-2">
               <input
                 type="text"
@@ -502,12 +503,12 @@ function App() {
                 disabled={isLoading || !currentConversationId}
                 id="message-input"
                 name="message"
-                className="flex-1 px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <button
                 type="submit"
                 disabled={isLoading || !currentConversationId}
-                className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center justify-center"
+                className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center justify-center"
               >
                 {isLoading ? (
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
