@@ -236,13 +236,13 @@ function App() {
       // Update conversation last message
       const conversationRef = doc(db, 'conversations', currentConversationId);
       const updateData: { lastMessage: string; timestamp: string; title?: string } = {
-        lastMessage: data.text.slice(0, 100),
+        lastMessage: data.text.length > 50 ? data.text.slice(0, 50) + '...' : data.text,
         timestamp: new Date().toISOString()
       };
       
       // Only set title if this is the first message
       if (messageHistory.length === 0) {
-        updateData.title = message.slice(0, 50);
+        updateData.title = message.length > 30 ? message.slice(0, 30) + '...' : message;
       }
       
       await updateDoc(conversationRef, updateData);
@@ -317,6 +317,14 @@ function App() {
           console.error('Audio setup error:', audioError);
         }
       }
+
+      // Scroll to bottom after new message
+      setTimeout(() => {
+        const messagesContainer = document.getElementById('messages-container');
+        if (messagesContainer) {
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+      }, 100);
     } catch (error) {
       console.error('Error:', error);
     } finally {
@@ -368,205 +376,149 @@ function App() {
   }
 
   return (
-    <div className="h-screen flex">
-      {/* Sidebar - Fixed width */}
-      <div className="w-64 flex flex-col h-full bg-white border-r border-gray-200">
-        {/* Fixed Header */}
-        <div className="shrink-0 p-4 border-b bg-white">
-          <div className="flex items-center gap-3 mb-4">
-            {user.photoURL && (
-              <img 
-                src={user.photoURL} 
-                alt="Profile" 
-                className="w-8 h-8 rounded-full"
-              />
-            )}
-            <div className="flex-1 min-w-0">
-              <div className="font-medium truncate">{user.displayName}</div>
-              <div className="text-xs text-gray-500 truncate">{user.email}</div>
-            </div>
-          </div>
-          <button
-            onClick={createNewConversation}
-            className="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-          >
-            New Chat
-          </button>
-        </div>
-        
-        {/* Scrollable Conversations List */}
-        <div className="flex-1 overflow-y-auto min-h-0">
-          {conversations.map((conv) => (
-            <div
-              key={conv.id}
-              className={`group relative hover:bg-gray-100 ${
-                currentConversationId === conv.id ? 'bg-gray-100' : ''
-              }`}
-            >
+    <div className="flex h-screen bg-gray-100">
+      {!user ? (
+        <SignIn />
+      ) : (
+        <>
+          {/* Sidebar */}
+          <div className="w-64 bg-white shadow-lg flex flex-col h-full">
+            <div className="p-4 border-b">
               <button
-                onClick={() => setCurrentConversationId(conv.id)}
-                className="w-full p-3 text-left flex flex-col gap-1"
+                onClick={createNewConversation}
+                className="w-full bg-blue-500 text-white rounded px-4 py-2 hover:bg-blue-600"
               >
-                <div className="font-medium truncate">{conv.title}</div>
-                <div className="text-xs text-gray-500 truncate">{conv.lastMessage}</div>
-              </button>
-              <button
-                onClick={(e) => deleteConversation(conv.id, e)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-2 text-gray-500 hover:text-red-500"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                New Chat
               </button>
             </div>
-          ))}
-        </div>
-
-        {/* Fixed Sign Out Button */}
-        <div className="shrink-0 p-4 border-t bg-white">
-          <button
-            onClick={handleSignOut}
-            className="w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded"
-          >
-            Sign Out
-          </button>
-        </div>
-      </div>
-
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col h-full">
-        {/* Fixed Header */}
-        <div className="shrink-0 flex items-center justify-between px-6 py-4 border-b bg-white">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 overflow-hidden rounded-lg shadow-md">
-              <img
-                src="/michael-levitt.jpg"
-                alt="Michael Levitt"
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-800">
-                Chat with Michael Levitt AI
-              </h1>
-              <button
-                onClick={() => {
-                  setContextInput(globalContext);
-                  setIsAddingContext(true);
-                }}
-                className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                </svg>
-                Edit Context
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Scrollable Messages */}
-        <div className="flex-1 overflow-y-auto min-h-0 bg-gray-50">
-          <div className="max-w-4xl mx-auto">
-            <div className="space-y-4 p-6">
-              {messageHistory.map((msg, index) => (
+            
+            {/* Conversations list - make it scrollable */}
+            <div className="flex-1 overflow-y-auto min-h-0">
+              {conversations.map((conv) => (
                 <div
-                  key={index}
-                  className={`p-4 rounded-lg ${
-                    msg.isUser ? 'bg-blue-100 ml-12' : 'bg-gray-100 mr-12'
+                  key={conv.id}
+                  onClick={() => setCurrentConversationId(conv.id)}
+                  className={`p-4 cursor-pointer hover:bg-gray-100 border-b ${
+                    currentConversationId === conv.id ? 'bg-gray-100' : ''
                   }`}
                 >
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="font-medium">
-                      {msg.isUser ? user.displayName || 'You' : 'Michael Levitt AI'}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {msg.timestamp}
-                    </span>
+                  <div className="font-medium">{conv.title}</div>
+                  <div className="text-sm text-gray-500 truncate">
+                    {conv.lastMessage}
                   </div>
-                  <div>{msg.text}</div>
                 </div>
               ))}
             </div>
-          </div>
-        </div>
 
-        {/* Fixed Input Form */}
-        <div className="shrink-0 p-4 border-t bg-white">
-          <div className="max-w-4xl mx-auto">
-            <form onSubmit={handleSubmit} className="flex gap-2">
-              <input
-                type="text"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Type your message..."
-                disabled={isLoading || !currentConversationId}
-                id="message-input"
-                name="message"
-                className="flex-1 px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+            {/* Sign out button */}
+            <div className="p-4 border-t">
               <button
-                type="submit"
-                disabled={isLoading || !currentConversationId}
-                className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center justify-center"
+                onClick={() => signOut(auth)}
+                className="w-full bg-red-500 text-white rounded px-4 py-2 hover:bg-red-600"
               >
-                {isLoading ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
-                  </svg>
-                )}
+                Sign Out
               </button>
-            </form>
-          </div>
-        </div>
-
-        {/* Context Modal */}
-        {isAddingContext && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg p-6 max-w-2xl w-full">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Global Context Settings</h3>
-                <button
-                  onClick={() => setIsAddingContext(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              <p className="text-sm text-gray-600 mb-4">
-                This context will be used as background information for all your conversations with Michael Levitt AI.
-              </p>
-              <textarea
-                value={contextInput}
-                onChange={(e) => setContextInput(e.target.value)}
-                placeholder="Add any relevant context that will be used in all conversations..."
-                className="w-full h-64 p-4 border rounded-lg mb-4 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <div className="flex justify-end gap-2">
-                <button
-                  onClick={() => {
-                    setIsAddingContext(false);
-                    setContextInput('');
-                  }}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleAddContext}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-                >
-                  Save Context
-                </button>
-              </div>
             </div>
           </div>
-        )}
-      </div>
+
+          {/* Main content */}
+          <div className="flex-1 flex flex-col h-full">
+            {/* Header */}
+            <div className="bg-white shadow-sm p-4 flex justify-between items-center">
+              <h1 className="text-xl font-semibold">Chat with Mike</h1>
+              <button
+                onClick={() => setIsAddingContext(true)}
+                className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded"
+              >
+                Edit Context
+              </button>
+            </div>
+
+            {/* Messages container - make it scrollable */}
+            <div 
+              id="messages-container"
+              className="flex-1 overflow-y-auto p-4 min-h-0"
+            >
+              {messageHistory.map((msg, index) => (
+                <div
+                  key={index}
+                  className={`mb-4 ${
+                    msg.isUser ? 'text-right' : 'text-left'
+                  }`}
+                >
+                  <div
+                    className={`inline-block p-3 rounded-lg ${
+                      msg.isUser
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-200 text-gray-800'
+                    }`}
+                  >
+                    {msg.text}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {msg.timestamp}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Input form - fixed at bottom */}
+            <div className="bg-white border-t p-4">
+              <form onSubmit={handleSubmit} className="flex gap-2">
+                <input
+                  id="message-input"
+                  type="text"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Type your message..."
+                  className="flex-1 p-2 border rounded"
+                  disabled={isLoading}
+                />
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className={`px-4 py-2 rounded ${
+                    isLoading
+                      ? 'bg-gray-400'
+                      : 'bg-blue-500 hover:bg-blue-600'
+                  } text-white`}
+                >
+                  {isLoading ? 'Sending...' : 'Send'}
+                </button>
+              </form>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Context Modal */}
+      {isAddingContext && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg p-6 max-w-lg w-full">
+            <h2 className="text-xl font-semibold mb-4">Edit Global Context</h2>
+            <textarea
+              value={contextInput}
+              onChange={(e) => setContextInput(e.target.value)}
+              className="w-full h-40 p-2 border rounded mb-4"
+              placeholder="Add context here..."
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setIsAddingContext(false)}
+                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddContext}
+                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
