@@ -250,7 +250,7 @@ function App() {
       // Always play audio response
       if (data.audio) {
         try {
-          // Convert base64 to blob with explicit typing for iOS
+          // Convert base64 to blob with explicit MIME type
           const byteCharacters = atob(data.audio);
           const byteNumbers = new Array(byteCharacters.length);
           for (let i = 0; i < byteCharacters.length; i++) {
@@ -258,12 +258,6 @@ function App() {
           }
           const byteArray = new Uint8Array(byteNumbers);
           const audioBlob = new Blob([byteArray], { type: 'audio/mpeg' });
-          
-          // Create audio element with specific attributes for iOS
-          const audio = new Audio();
-          audio.setAttribute('playsinline', 'true');
-          audio.setAttribute('webkit-playsinline', 'true');
-          audio.preload = 'auto';
           
           // Stop any currently playing audio
           if (window.currentAudio) {
@@ -273,28 +267,49 @@ function App() {
             window.currentAudio = null;
           }
 
-          // Create object URL
-          const audioUrl = URL.createObjectURL(audioBlob);
+          // Create and configure audio element
+          const audio = new Audio();
+          audio.setAttribute('playsinline', 'true');
+          audio.setAttribute('webkit-playsinline', 'true');
+          audio.preload = 'auto';
           
-          // Set up event listeners before setting source
+          // Create object URL and set up audio
+          const audioUrl = URL.createObjectURL(audioBlob);
+          audio.src = audioUrl;
+          
+          // Set up play handler with retry logic
           const playAudio = async () => {
-            try {
-              // Try playing multiple times with small delays
-              for (let i = 0; i < 3; i++) {
-                try {
-                  await audio.play();
-                  break; // If successful, exit the loop
-                } catch (error) {
-                  if (i < 2) { // Don't wait on the last attempt
-                    await new Promise(resolve => setTimeout(resolve, 100 * (i + 1)));
-                  }
+            for (let i = 0; i < 3; i++) {
+              try {
+                // Create a user interaction promise
+                const userInteraction = new Promise((resolve) => {
+                  // Add a temporary button for iOS
+                  const tempButton = document.createElement('button');
+                  tempButton.style.position = 'fixed';
+                  tempButton.style.top = '0';
+                  tempButton.style.left = '0';
+                  tempButton.style.zIndex = '9999';
+                  tempButton.onclick = () => {
+                    resolve(true);
+                    tempButton.remove();
+                  };
+                  document.body.appendChild(tempButton);
+                  tempButton.click();
+                });
+
+                await userInteraction;
+                await audio.play();
+                break; // If successful, exit the loop
+              } catch (error) {
+                console.warn(`Playback attempt ${i + 1} failed:`, error);
+                if (i < 2) {
+                  await new Promise(resolve => setTimeout(resolve, 100 * (i + 1)));
                 }
               }
-            } catch (error) {
-              console.error('Final playback attempt failed:', error);
             }
           };
 
+          // Set up event listeners
           audio.addEventListener('canplaythrough', playAudio, { once: true });
           
           audio.addEventListener('error', (e) => {
@@ -306,11 +321,8 @@ function App() {
             window.currentAudio = null;
           });
 
-          // Set source and store reference
-          audio.src = audioUrl;
+          // Store reference and load
           window.currentAudio = audio;
-          
-          // Load the audio
           await audio.load();
 
         } catch (audioError) {
