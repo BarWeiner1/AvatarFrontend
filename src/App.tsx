@@ -250,80 +250,40 @@ function App() {
       // Always play audio response
       if (data.audio) {
         try {
-          // Convert base64 to blob with explicit MIME type
+          // Convert base64 to blob
           const byteCharacters = atob(data.audio);
           const byteNumbers = new Array(byteCharacters.length);
           for (let i = 0; i < byteCharacters.length; i++) {
             byteNumbers[i] = byteCharacters.charCodeAt(i);
           }
           const byteArray = new Uint8Array(byteNumbers);
-          const audioBlob = new Blob([byteArray], { type: 'audio/mpeg' });
+          const audioBlob = new Blob([byteArray], { type: 'audio/mp3' });
           
           // Stop any currently playing audio
           if (window.currentAudio) {
             window.currentAudio.pause();
-            window.currentAudio.src = '';
-            URL.revokeObjectURL(window.currentAudio.src);
             window.currentAudio = null;
           }
 
-          // Create and configure audio element
+          // Create and play audio
           const audio = new Audio();
-          audio.setAttribute('playsinline', 'true');
-          audio.setAttribute('webkit-playsinline', 'true');
-          audio.preload = 'auto';
+          audio.src = URL.createObjectURL(audioBlob);
+          audio.setAttribute('playsinline', '');
+          audio.setAttribute('webkit-playsinline', '');
           
-          // Create object URL and set up audio
-          const audioUrl = URL.createObjectURL(audioBlob);
-          audio.src = audioUrl;
-          
-          // Set up play handler with retry logic
-          const playAudio = async () => {
-            for (let i = 0; i < 3; i++) {
-              try {
-                // Create a user interaction promise
-                const userInteraction = new Promise((resolve) => {
-                  // Add a temporary button for iOS
-                  const tempButton = document.createElement('button');
-                  tempButton.style.position = 'fixed';
-                  tempButton.style.top = '0';
-                  tempButton.style.left = '0';
-                  tempButton.style.zIndex = '9999';
-                  tempButton.onclick = () => {
-                    resolve(true);
-                    tempButton.remove();
-                  };
-                  document.body.appendChild(tempButton);
-                  tempButton.click();
-                });
+          // Simple play attempt
+          try {
+            await audio.play();
+            window.currentAudio = audio;
+          } catch (playError) {
+            console.error('Playback failed:', playError);
+          }
 
-                await userInteraction;
-                await audio.play();
-                break; // If successful, exit the loop
-              } catch (error) {
-                console.warn(`Playback attempt ${i + 1} failed:`, error);
-                if (i < 2) {
-                  await new Promise(resolve => setTimeout(resolve, 100 * (i + 1)));
-                }
-              }
-            }
-          };
-
-          // Set up event listeners
-          audio.addEventListener('canplaythrough', playAudio, { once: true });
-          
-          audio.addEventListener('error', (e) => {
-            console.error('Audio loading error:', e);
-          });
-
+          // Cleanup when done
           audio.addEventListener('ended', () => {
-            URL.revokeObjectURL(audioUrl);
+            URL.revokeObjectURL(audio.src);
             window.currentAudio = null;
           });
-
-          // Store reference and load
-          window.currentAudio = audio;
-          await audio.load();
 
         } catch (audioError) {
           console.error('Audio setup error:', audioError);
